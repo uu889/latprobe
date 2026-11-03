@@ -53,7 +53,7 @@ func TestTCPProbe(t *testing.T) {
 
 	// A hostname adds a separately timed DNS phase.
 	_, port, _ := net.SplitHostPort(ln.Addr().String())
-	m, err = NewTCP("localhost:"+port).Probe(ctxTimeout(t, 2*time.Second))
+	m, err = NewTCP("localhost:" + port).Probe(ctxTimeout(t, 2*time.Second))
 	if err != nil {
 		t.Fatalf("probe localhost: %v", err)
 	}
@@ -186,14 +186,18 @@ func TestHTTPSProbeHasTLSPhase(t *testing.T) {
 
 	p := NewHTTP(srv.URL, nil)
 	// Trust the test server's self-signed certificate.
-	p.client.Transport.(*http.Transport).TLSClientConfig = srv.Client().Transport.(*http.Transport).TLSClientConfig
+	p.tlsConfig = srv.Client().Transport.(*http.Transport).TLSClientConfig
 
-	m, err := p.Probe(ctxTimeout(t, 2*time.Second))
-	if err != nil {
-		t.Fatalf("probe: %v", err)
-	}
-	if got := phaseNames(m.Phases); got != "connect,tls,ttfb,transfer" {
-		t.Errorf("phases = %s", got)
+	// Every probe must use a cold connection, so the second one still
+	// reports connect and TLS.
+	for i := 0; i < 2; i++ {
+		m, err := p.Probe(ctxTimeout(t, 2*time.Second))
+		if err != nil {
+			t.Fatalf("probe %d: %v", i, err)
+		}
+		if got := phaseNames(m.Phases); got != "connect,tls,ttfb,transfer" {
+			t.Errorf("probe %d: phases = %s", i, got)
+		}
 	}
 }
 

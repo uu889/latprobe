@@ -1,0 +1,56 @@
+# latprobe example configuration.
+#
+# interval: time between two probes of the same target
+# timeout:  default per-probe timeout (must not exceed interval)
+# window:   samples kept per target for p50/p95/p99, jitter and loss
+interval: 5s
+timeout: 2s
+window: 120   # 10 minutes of history at a 5s interval
+
+targets:
+  # --- DNS: how fast do public resolvers answer? -------------------------
+  - name: cloudflare-dns
+    type: dns
+    address: github.com      # name to resolve
+    resolver: 1.1.1.1:53     # server to ask
+    region: anycast
+  - name: google-dns
+    type: dns
+    address: github.com
+    resolver: 8.8.8.8:53
+    region: anycast
+  - name: quad9-dns
+    type: dns
+    address: github.com
+    resolver: 9.9.9.9
+    region: anycast
+
+  # --- TCP: pure handshake RTT (DNS is timed separately) -----------------
+  - name: cloudflare-tcp
+    type: tcp
+    address: 1.1.1.1:443
+    region: anycast
+  - name: google-tcp
+    type: tcp
+    address: 8.8.8.8:443
+    region: anycast
+  - name: github-tcp
+    type: tcp
+    address: github.com:443
+    region: us
+
+  # --- HTTP(S): full request with dns/connect/tls/ttfb breakdown ---------
+  - name: cloudflare-trace
+    type: http
+    address: https://www.cloudflare.com/cdn-cgi/trace
+    region: anycast
+  - name: google-204
+    type: http
+    address: https://www.google.com/generate_204
+    expect_status: [204]
+    region: anycast
+  - name: github-web
+    type: http
+    address: https://github.com/
+    region: us
+    timeout: 4s

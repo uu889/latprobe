@@ -23,31 +23,37 @@ var UserAgent = "latprobe"
 type HTTPProber struct {
 	url    string
 	expect []int
-	client *http.Client
+	// tlsConfig is nil (system roots) except in tests.
+	tlsConfig *tls.Config
 }
 
 // NewHTTP returns a prober for url. expect lists acceptable status codes;
 // empty means any status below 400.
 func NewHTTP(url string, expect []int) *HTTPProber {
-	transport := &http.Transport{
-		// A new connection per probe, otherwise DNS/connect/TLS would only
-		// be measured once and later samples would hide them.
+	return &HTTPProber{url: url, expect: expect}
+}
+
+// client builds a throwaway client for a single probe.
+//
+// A new Transport per probe guarantees a cold connection, so every sample
+// includes DNS, connect and TLS. DisableKeepAlives alone is not enough: a
+// dial that completes after a timed-out probe can still land in a shared
+// pool and be reused, silently hiding those phases from the next sample.
+func (p *HTTPProber) client() (*http.Client, *http.Transport) {
+	tr := &http.Transport{
 		DisableKeepAlives: true,
 		ForceAttemptHTTP2: true,
+		TLSClientConfig:   p.tlsConfig,
 		// Proxies would measure the path to the proxy, not to the target.
 		Proxy: nil,
 	}
-	return &HTTPProber{
-		url:    url,
-		expect: expect,
-		client: &http.Client{
-			Transport: transport,
-			// Measure a single hop; following redirects would mix targets.
-			CheckRedirect: func(*http.Request, []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
+	return &http.Client{
+		Transport: tr,
+		// Measure a single hop; following redirects would mix targets.
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
 		},
-	}
+	}, tr
 }
 
 // timings collects httptrace callbacks. Some callbacks (e.g. ConnectStart
@@ -119,8 +125,11 @@ func (p *HTTPProber) Probe(ctx context.Context) (Measurement, error) {
 	}
 	req.Header.Set("User-Agent", UserAgent)
 
+	client, tr := p.client()
+	defer tr.CloseIdleConnections()
+
 	start := time.Now()
-	resp, err := p.client.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		end := time.Now()
 		return Measurement{RTT: end.Sub(start), Phases: tm.phases(end)}, err
