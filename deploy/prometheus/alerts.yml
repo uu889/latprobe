@@ -1,0 +1,26 @@
+groups:
+  - name: latprobe
+    rules:
+      - alert: ProbeTargetDown
+        expr: latprobe_probe_success == 0
+        for: 2m
+        labels: {severity: page}
+        annotations:
+          summary: "{{ $labels.target }} ({{ $labels.probe }}) failing for 2m"
+
+      - alert: ProbeHighLoss
+        expr: latprobe_window_loss_ratio > 0.05
+        for: 5m
+        labels: {severity: warn}
+        annotations:
+          summary: "{{ $labels.target }} loss {{ $value | humanizePercentage }} over the window"
+
+      - alert: ProbeHighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum by (target, region, probe, le) (rate(latprobe_probe_duration_seconds_bucket[5m]))
+          ) > 0.5
+        for: 10m
+        labels: {severity: warn}
+        annotations:
+          summary: "{{ $labels.target }} p99 above 500ms for 10m"

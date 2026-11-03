@@ -65,7 +65,7 @@ func TestParseErrors(t *testing.T) {
 		want string
 	}{
 		{"no targets", "interval: 1s\n", "at least one target"},
-		{"unknown field", "targets:\n  - type: tcp\n    adress: x:1\n", "field adress not found"},
+		{"unknown field", "targets:\n  - type: tcp\n    adress: x:1\n", "field adress not found"}, //nolint:misspell // typo is the point
 		{"bad type", "targets:\n  - type: icmp\n    address: x\n", "unknown type"},
 		{"tcp without port", "targets:\n  - type: tcp\n    address: example.com\n", "host:port"},
 		{"bad url", "targets:\n  - type: http\n    address: ftp://x\n", "http(s) URL"},

@@ -181,7 +181,7 @@ func TestHTTPProbe(t *testing.T) {
 }
 
 func TestHTTPSProbeHasTLSPhase(t *testing.T) {
-	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	defer srv.Close()
 
 	p := NewHTTP(srv.URL, nil)
