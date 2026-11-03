@@ -109,9 +109,6 @@ func (c *Config) ApplyDefaults() {
 	for i := range c.Targets {
 		t := &c.Targets[i]
 		t.Type = ProbeType(strings.ToLower(string(t.Type)))
-		if t.Name == "" {
-			t.Name = string(t.Type) + "://" + t.Address
-		}
 		if t.Timeout == 0 {
 			t.Timeout = c.Timeout
 		}
@@ -126,7 +123,19 @@ func (c *Config) ApplyDefaults() {
 				}
 			}
 		}
+		if t.Name == "" {
+			t.Name = defaultName(*t)
+		}
 	}
+}
+
+// defaultName derives a readable name, e.g. "github.com:443" or, for DNS
+// against a specific resolver, "github.com@1.1.1.1:53" (dig style).
+func defaultName(t Target) string {
+	if t.Type == DNS && t.Resolver != "" {
+		return t.Address + "@" + t.Resolver
+	}
+	return t.Address
 }
 
 // Validate reports every problem found, not just the first one.

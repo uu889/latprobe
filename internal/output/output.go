@@ -106,22 +106,22 @@ func WriteTable(w io.Writer, snap []runner.TargetStats) error {
 		return err
 	}
 
-	var b strings.Builder
+	first := true
 	for _, ts := range snap {
 		if ts.Last == nil || len(ts.Last.Phases) < 2 {
 			continue
+		}
+		if first {
+			fmt.Fprintln(tw, "\nPhase breakdown (last probe):")
+			first = false
 		}
 		parts := make([]string, len(ts.Last.Phases))
 		for i, p := range ts.Last.Phases {
 			parts[i] = p.Name + "=" + dur(p.Duration)
 		}
-		fmt.Fprintf(&b, "  %-20s %s\n", ts.Target.Name, strings.Join(parts, "  "))
+		fmt.Fprintf(tw, "  %s\t%s\n", ts.Target.Name, strings.Join(parts, "  "))
 	}
-	if b.Len() > 0 {
-		_, err := fmt.Fprintf(w, "\nPhase breakdown (last probe):\n%s", b.String())
-		return err
-	}
-	return nil
+	return tw.Flush()
 }
 
 func lastNote(l *runner.Result) string {

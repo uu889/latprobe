@@ -24,11 +24,11 @@ targets:
 		t.Errorf("defaults not applied: %+v", cfg)
 	}
 	tcp := cfg.Targets[0]
-	if tcp.Type != TCP || tcp.Name != "tcp://example.com:443" || tcp.Timeout != DefaultTimeout {
+	if tcp.Type != TCP || tcp.Name != "example.com:443" || tcp.Timeout != DefaultTimeout {
 		t.Errorf("unexpected tcp target: %+v", tcp)
 	}
 	dns := cfg.Targets[1]
-	if dns.Resolver != "1.1.1.1:53" || dns.Record != "A" {
+	if dns.Resolver != "1.1.1.1:53" || dns.Record != "A" || dns.Name != "example.com@1.1.1.1:53" {
 		t.Errorf("unexpected dns target: %+v", dns)
 	}
 }
